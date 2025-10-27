@@ -1,7 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { ArrowUpIcon, CheckIcon, PlusIcon } from "lucide-react"
+import { ArrowUpIcon, CheckIcon, PlusIcon, ExternalLinkIcon, HistoryIcon } from "lucide-react"
+import { storeConversation } from '@/lib/lighthouse-storage'
+import { SavedConversationsDialog } from '@/components/saved-conversations-dialog'
 
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -49,33 +51,43 @@ const users = [
 
 type User = (typeof users)[number]
 
-export function CardsChat() {
+export function ChatInterface() {
   const [open, setOpen] = React.useState(false)
   const [selectedUsers, setSelectedUsers] = React.useState<User[]>([])
-
+  const [isHistoryOpen, setIsHistoryOpen] = React.useState(false)
   const [messages, setMessages] = React.useState([
     {
       role: "agent",
       content: "Hi, how can I help you today?",
     },
-    {
-      role: "user",
-      content: "Hey, I'm having trouble with my account.",
-    },
-    {
-      role: "agent",
-      content: "What seems to be the problem?",
-    },
-    {
-      role: "user",
-      content: "I can't log in.",
-    },
   ])
   const [input, setInput] = React.useState("")
   const inputLength = input.trim().length
 
+  // Automatically store conversation when messages change
+  React.useEffect(() => {
+    const autoStore = async () => {
+      if (messages.length > 0) {
+        try {
+          await storeConversation(
+            messages,
+            process.env.NEXT_PUBLIC_LIGHTHOUSE_API_KEY || ""
+          );
+        } catch (error) {
+          console.error('Error storing conversation:', error);
+        }
+      }
+    };
+    
+    autoStore();
+  }, [messages]);
+
   return (
     <>
+      <SavedConversationsDialog 
+        open={isHistoryOpen}
+        onOpenChange={setIsHistoryOpen}
+      />
       <Card>
         <CardHeader className="flex flex-row items-center">
           <div className="flex items-center gap-4">
@@ -88,6 +100,15 @@ export function CardsChat() {
               <p className="text-muted-foreground text-xs">m@example.com</p>
             </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto flex items-center gap-2"
+            onClick={() => setIsHistoryOpen(true)}
+          >
+            <HistoryIcon className="h-4 w-4" />
+            <span>View History</span>
+          </Button>
           <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -125,13 +146,14 @@ export function CardsChat() {
             onSubmit={(event) => {
               event.preventDefault()
               if (inputLength === 0) return
-              setMessages([
+              const newMessages = [
                 ...messages,
                 {
                   role: "user",
                   content: input,
                 },
-              ])
+              ];
+              setMessages(newMessages)
               setInput("")
             }}
             className="relative w-full"

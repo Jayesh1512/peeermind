@@ -1,14 +1,14 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { MessageContent } from "./message-content"
-import { Sparkles, MessageCircle, Zap, BookOpen } from "lucide-react"
+import { Sparkles, MessageCircle, Zap, BookOpen, HistoryIcon } from "lucide-react"
+import { storeConversation } from '@/lib/lighthouse-storage'
+import { SavedConversationsDialog } from '@/components/saved-conversations-dialog'
 
 interface Message {
   role: "user" | "assistant"
@@ -19,6 +19,7 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom when new messages arrive
@@ -27,6 +28,21 @@ export function ChatInterface() {
       scrollRef.current.scrollIntoView({ behavior: "smooth" })
     }
   }, [messages])
+
+  // Store conversation only when we receive an AI response
+  const storeConversationIfComplete = async (messages: Message[]) => {
+    // Only store if we have at least one complete exchange (user message + AI response)
+    if (messages.length >= 2) {
+      try {
+        await storeConversation(
+          messages,
+          process.env.NEXT_PUBLIC_LIGHTHOUSE_API_KEY || ""
+        );
+      } catch (error) {
+        console.error('Error storing conversation:', error);
+      }
+    }
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,14 +72,20 @@ export function ChatInterface() {
         content: data.choices?.[0]?.message?.content || "No response received",
       }
 
-      setMessages([...updatedMessages, assistantMessage])
+      const newMessages = [...updatedMessages, assistantMessage];
+      setMessages(newMessages);
+      // Store conversation after we get the AI response
+      await storeConversationIfComplete(newMessages);
     } catch (error) {
       console.error("Error:", error)
       const errorMessage: Message = {
         role: "assistant",
         content: "Sorry, I encountered an error. Please try again.",
       }
-      setMessages([...updatedMessages, errorMessage])
+      const newMessages = [...updatedMessages, errorMessage];
+      setMessages(newMessages);
+      // Store even error conversations
+      await storeConversationIfComplete(newMessages);
     } finally {
       setIsLoading(false)
     }
@@ -71,15 +93,32 @@ export function ChatInterface() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
+      <SavedConversationsDialog 
+        open={isHistoryOpen}
+        onOpenChange={setIsHistoryOpen}
+      />
       {/* Header */}
-      <div className="border-b border-border p-6 bg-gradient-to-r from-background to-card">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 rounded bg-primary/10">
-            <Sparkles className="h-5 w-5 text-primary" />
+      <div className="border-b border-border p-6 bg-linear-to-r from-background to-card">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded bg-primary/10">
+              <Sparkles className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">peermind</h1>
+              <p className="text-sm text-muted-foreground">Your AI companion powered by Mixtral 8x22B</p>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-foreground">peermind</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={() => setIsHistoryOpen(true)}
+          >
+            <HistoryIcon className="h-4 w-4" />
+            <span>View History</span>
+          </Button>
         </div>
-        <p className="text-sm text-muted-foreground ml-11">Your AI companion powered by Mixtral 8x22B</p>
       </div>
 
       {/* Messages Area */}
