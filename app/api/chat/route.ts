@@ -1,7 +1,14 @@
-const NEAR_AI_TOKEN = `{"account_id":"jayeshh.near","public_key":"ed25519:BqbfWQvudJqCML1xxHnFYpccCcq1FprEYu1rvZpWFRJr","signature":"Ag9BKNGkkVIN7ItpGnAPLYq9yehb1n70OFcWcbYtJIu1K5jYsR/nhCnSHXpOFtKegctxlVTCXW55RxvDKk62DA==","callback_url":"https://app.near.ai/sign-in/callback","message":"Welcome to NEAR AI Hub!","recipient":"ai.near","nonce":"00000000000000000001754993801700"}`
+const NEAR_AI_TOKEN = process.env.NEAR_AI_TOKEN
 
 export async function POST(req: Request) {
   try {
+    if (!NEAR_AI_TOKEN) {
+      return new Response(JSON.stringify({ error: "AI service not configured" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
     const { messages } = await req.json()
 
     const response = await fetch("https://api.near.ai/v1/chat/completions", {
