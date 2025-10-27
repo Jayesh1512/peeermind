@@ -14,13 +14,7 @@ Any changes you make to your deployed app will be automatically pushed to this r
 
 Your project is live at:
 
-**[https://vercel.com/jayesh1512s-projects/v0-sketchpad-shadcn-ui-theme](https://vercel.com/jayesh1512s-projects/v0-sketchpad-shadcn-ui-theme)**
-
-## Build your app
-
-Continue building your app on:
-
-**[https://v0.app/chat/projects/KZd9IPhEBsI](https://v0.app/chat/projects/KZd9IPhEBsI)**
+**[https://peeermind.vercel.app/](https://peeermind.vercel.app/)**
 
 ## How It Works
 
